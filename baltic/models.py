@@ -6,7 +6,7 @@
 #
 
 
-from typing import Union
+from typing import Union, Literal
 
 
 class BaseTreeObject:
@@ -46,7 +46,7 @@ class BaseTreeObject:
         return self._branch_type
 
     @branch_type.setter
-    def branch_type(self, branch_type: Union["node", "leaf"]):
+    def branch_type(self, branch_type: Literal["node", "leaf"]):
         self._branch_type = branch_type
 
     @property

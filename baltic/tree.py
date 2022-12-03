@@ -10,6 +10,8 @@ import copy
 import math
 from typing import Callable, Iterable, Optional
 
+from matplotlib.collections import LineCollection
+
 from .models import Leaf, Node, Reticulation
 
 

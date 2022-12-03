@@ -2,8 +2,9 @@ from io import BytesIO as csio
 import json
 import re
 import requests
-from typing import Union, IO
+from typing import IO, Tuple, Union
 
+from .dates import decimal_date
 from .tree import Tree, make_tree, make_tree_json
 
 
@@ -75,9 +76,9 @@ def load_nexus(
     """
     Load nexus file
     """
-    tipFlag = False
+    tip_flag = False
     tips = {}
-    tipNum = 0
+    tip_num = 0
     ll = None
     if isinstance(tree_path, str):
         handle = open(tree_path, "r")
@@ -89,9 +90,9 @@ def load_nexus(
 
         cerberus = re.search("dimensions ntax=([0-9]+);", l.lower())
         if cerberus is not None:
-            tipNum = int(cerberus.group(1))
-            if verbose == True:
-                print("File should contain %d taxa" % (tipNum))
+            tip_num = int(cerberus.group(1))
+            if verbose:
+                print("File should contain %d taxa" % (tip_num))
 
         cerberus = re.search(tree_string_regex, l.lower())
         if cerberus is not None:
@@ -99,14 +100,14 @@ def load_nexus(
             ll = make_tree(
                 l[tree_string_start:]
             )  ## send tree string to make_tree function
-            if verbose == True:
+            if verbose:
                 print("Identified tree string")
 
-        if tipFlag == True:
+        if tip_flag:
             cerberus = re.search("([0-9]+) ([A-Za-z\-\_\/\.'0-9 \|?]+)", l)
             if cerberus is not None:
                 tips[cerberus.group(1)] = cerberus.group(2).strip('"').strip("'")
-                if verbose == True:
+                if verbose:
                     print(
                         "Identified tip translation %s: %s"
                         % (cerberus.group(1), tips[cerberus.group(1)])
@@ -115,16 +116,16 @@ def load_nexus(
                 print("tip not captured by regex:", l.replace("\t", ""))
 
         if "translate" in l.lower():
-            tipFlag = True
+            tip_flag = True
         if ";" in l:
-            tipFlag = False
+            tip_flag = False
 
     assert ll, "Regular expression failed to find tree string"
     ll.traverse_tree()  ## traverse tree
     if sort_branches:
         ll.sort_branches()  ## traverses tree, sorts branches, draws tree
     if len(tips) > 0:
-        ll.renameTips(tips)  ## renames tips from numbers to actual names
+        ll.rename_tips(tips)  ## renames tips from numbers to actual names
         ll.tipMap = tips
     if absolute_time:
         tip_dates = []
@@ -157,7 +158,7 @@ def load_json(
     verbose: bool = False,
     sort: bool = True,
     stats: bool = True,
-):
+) -> Tuple[Tree, dict]:
     """
     Load a nextstrain JSON by providing either the path to JSON or a file handle.
     json_translation is a dictionary that translates JSON attributes to baltic branch attributes (e.g. 'absolute_time' is called 'num_date' in nextstrain JSONs).
@@ -182,19 +183,20 @@ def load_json(
     if verbose:
         print("Reading JSON")
 
-    if isinstance(
-        json_object, str
-    ):  ## string provided - either nextstrain URL or local path
+    if isinstance(json_object, str):
+        ## string provided - either nextstrain URL or local path
         if "nextstrain.org" in json_object:  ## nextsrain.org in URL - request it
             if verbose:
                 print("Assume URL provided, loading JSON from nextstrain.org")
             auspice_json = json.load(csio(requests.get(json_object).content))
-        else:  ## not nextstrain.org URL - assume local path to auspice v2 json
+        else:
+            ## not nextstrain.org URL - assume local path to auspice v2 json
             if verbose:
                 print("Loading JSON from local path")
             with open(json_object) as json_data:
                 auspice_json = json.load(json_data)
-    else:  ## not string, assume auspice v2 json object given
+    else:  #
+        # not string, assume auspice v2 json object given
         if verbose:
             print("Loading JSON from object given")
         auspice_json = json_object
@@ -213,25 +215,25 @@ def load_json(
 
     if verbose:
         print("Setting baltic traits from JSON")
-    for k in ll.Objects:  ## make node attributes easier to access
+    for k in ll.objects:
+        ## make node attributes easier to access
         for key in k.traits["node_attrs"]:
             if isinstance(k.traits["node_attrs"][key], dict):
                 if "value" in k.traits["node_attrs"][key]:
                     k.traits[key] = k.traits["node_attrs"][key]["value"]
                 if "confidence" in k.traits["node_attrs"][key]:
-                    k.traits["%s_confidence" % (key)] = k.traits["node_attrs"][key][
+                    k.traits[f"{key}_confidence"] = k.traits["node_attrs"][key][
                         "confidence"
                     ]
             elif key == "div":
                 k.traits["divergence"] = k.traits["node_attrs"][key]
 
-    for attr in json_translation:  ## iterate through attributes in json_translation
-        for k in ll.Objects:  ## for every branch
+    for attr in json_translation:
+        for k in ll.objects:
             if isinstance(json_translation[attr], str):
                 if json_translation[attr] in k.traits:
-                    setattr(
-                        k, attr, k.traits[json_translation[attr]]
-                    )  ## set attribute value for branch
+                    ## set attribute value for branch
+                    setattr(k, attr, k.traits[json_translation[attr]])
                 elif (
                     "node_attrs" in k.traits
                     and json_translation[attr] in k.traits["node_attrs"]
@@ -244,40 +246,34 @@ def load_json(
                     setattr(k, attr, k.traits["branch_attrs"][json_translation[attr]])
                 else:
                     raise KeyError(
-                        "String attribute %s not found in JSON"
-                        % (json_translation[attr])
+                        f"String attribute {json_translation[attr]} not found in JSON"
                     )
             elif callable(json_translation[attr]):
-                setattr(
-                    k, attr, json_translation[attr](k)
-                )  ## set attribute value with a function for branch
+                ## set attribute value with a function for branch
+                setattr(k, attr, json_translation[attr](k))
             else:
                 raise AttributeError(
-                    "Attribute %s neither string nor callable"
-                    % (json_translation[attr])
+                    f"Attribute {json_translation[attr]} neither string nor callable"
                 )
 
-    for branch_unit in [
-        "height",
-        "absolute_time",
-    ]:  ## iterate between divergence and absolute time
+    ## iterate between divergence and absolute time
+    for branch_unit in ["height", "absolute_time"]:
         if branch_unit in json_translation:  ## it's available in tree
-            for k in ll.Objects:  ## iterate over all branches
+            for k in ll.objects:
                 cur_branch = getattr(k, branch_unit)  ## get parameter for this branch
-                par_branch = getattr(
-                    k.parent, branch_unit
-                )  ## get parameter for parental branch
-                k.length = (
-                    cur_branch - par_branch if cur_branch and par_branch else 0.0
-                )  ## difference between current and parent is branch length (or, if parent unavailabel it's 0)
+                ## get parameter for parental branch
+                par_branch = getattr(k.parent, branch_unit)
+                # difference between current and parent is branch length
+                # (or, if parent unavailabel it's 0)
+                k.length = cur_branch - par_branch if cur_branch and par_branch else 0.0
 
     if verbose:
         print("Traversing and drawing tree")
 
     ll.traverse_tree(verbose=verbose)
-    ll.drawTree()
+    ll.draw_tree()
     if stats:
-        ll.treeStats()  ## initial traversal, checks for stats
+        ll.tree_stats()  ## initial traversal, checks for stats
     if sort:
         ll.sort_branches()  ## traverses tree, sorts branches, draws tree
 
