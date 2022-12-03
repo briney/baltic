@@ -153,12 +153,22 @@ class BaseTreeObject:
         self._y = y
 
     def is_leaflike(self):
+        """
+        If `True`, the object is not a real leaf but is posing
+        as one (like `Clade` or `Reticulation`).
+        """
         return False
 
     def is_leaf(self):
+        """
+        `True` if the object is a leaf, `False` otherwise.
+        """
         return False
 
     def is_node(self):
+        """
+        `True` if the object is a node, `False` otherwise.
+        """
         return False
 
 
@@ -187,16 +197,10 @@ class Leaf(BaseTreeObject):
 
     def __init__(self):
         super(Leaf, self).__init__()
-        self.branchType = "leaf"
-
-    def is_leaflike(self):
-        return False
+        self.branch_type = "leaf"
 
     def is_leaf(self):
         return True
-
-    def is_node(self):
-        return False
 
 
 class Clade(BaseTreeObject):

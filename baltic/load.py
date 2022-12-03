@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+# filename: load.py
+#
+# Inspiration: https://github.com/evogytis/baltic
+# License: GNU General Public License v3.0 (https://opensource.org/licenses/GPL-3.0)
+#
+
+
 import json
 import re
 import requests
