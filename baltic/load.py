@@ -1,4 +1,3 @@
-from io import BytesIO as csio
 import json
 import re
 import requests
@@ -6,6 +5,9 @@ from typing import IO, Tuple, Union
 
 from .dates import decimal_date
 from .tree import Tree, make_tree, make_tree_json
+
+
+__all__ = ["load_newick", "load_nexus", "load_json"]
 
 
 def load_newick(
@@ -188,6 +190,8 @@ def load_json(
         if "nextstrain.org" in json_object:  ## nextsrain.org in URL - request it
             if verbose:
                 print("Assume URL provided, loading JSON from nextstrain.org")
+            from io import BytesIO as csio
+
             auspice_json = json.load(csio(requests.get(json_object).content))
         else:
             ## not nextstrain.org URL - assume local path to auspice v2 json

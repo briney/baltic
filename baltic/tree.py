@@ -15,6 +15,9 @@ from matplotlib.collections import LineCollection
 from .models import Leaf, Node, Reticulation
 
 
+__all__ = ["Tree", "untangle", "make_tree"]
+
+
 class Tree:
     """
     docstring for Tree
