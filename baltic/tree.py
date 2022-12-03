@@ -15,7 +15,7 @@ from matplotlib.collections import LineCollection
 from .models import Leaf, Node, Reticulation
 
 
-__all__ = ["Tree", "untangle", "make_tree"]
+__all__ = ["Tree", "untangle", "make_tree", "make_tree_json"]
 
 
 class Tree:
@@ -1557,7 +1557,7 @@ def make_tree(data, ll=None, verbose=False):
         data = str(data)
 
     if ll == None:  ## calling without providing a tree object - create one
-        ll = tree()
+        ll = Tree()
     i = 0  ## is an adjustable index along the tree string, it is incremented to advance through the string
     stored_i = None  ## store the i at the end of the loop, to make sure we haven't gotten stuck somewhere in an infinite loop
 
@@ -1813,7 +1813,7 @@ def make_tree_json(JSONnode, json_translation, ll=None, verbose=False):
         ]  ## set leaf name to be the same
 
     if ll is None:
-        ll = tree()
+        ll = Tree()
         ll.root = new_node
     if "attr" in JSONnode:
         attr = JSONnode.pop("attr")
